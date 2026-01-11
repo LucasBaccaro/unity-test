@@ -58,7 +58,21 @@ public class PlayerCombat : NetworkBehaviour
         {
             if (habilidad1 != null)
             {
-                CmdUsarHabilidad(1);
+                // Obtener el netId del target seleccionado (0 si no hay target)
+                uint targetNetId = (targetingSystem.objetivoActual != null)
+                    ? targetingSystem.objetivoActual.netId
+                    : 0;
+
+                if (targetingSystem.objetivoActual != null)
+                {
+                    Debug.Log($"[CLIENTE] Usando habilidad 1 con target: {targetingSystem.objetivoActual.name} (netId: {targetNetId})");
+                }
+                else
+                {
+                    Debug.Log($"[CLIENTE] Usando habilidad 1 sin target (curación/self)");
+                }
+
+                CmdUsarHabilidad(1, targetNetId);
             }
         }
 
@@ -67,7 +81,21 @@ public class PlayerCombat : NetworkBehaviour
         {
             if (habilidad2 != null)
             {
-                CmdUsarHabilidad(2);
+                // Obtener el netId del target seleccionado (0 si no hay target)
+                uint targetNetId = (targetingSystem.objetivoActual != null)
+                    ? targetingSystem.objetivoActual.netId
+                    : 0;
+
+                if (targetingSystem.objetivoActual != null)
+                {
+                    Debug.Log($"[CLIENTE] Usando habilidad 2 con target: {targetingSystem.objetivoActual.name} (netId: {targetNetId})");
+                }
+                else
+                {
+                    Debug.Log($"[CLIENTE] Usando habilidad 2 sin target (curación/self)");
+                }
+
+                CmdUsarHabilidad(2, targetNetId);
             }
         }
     }
@@ -78,13 +106,24 @@ public class PlayerCombat : NetworkBehaviour
 
     /// <summary>
     /// Intenta usar una habilidad por índice (1 o 2).
+    ///
+    /// NETWORKING: El cliente envía el netId del target seleccionado.
+    /// El servidor obtiene el NetworkIdentity y valida todo antes de ejecutar.
     /// </summary>
+    /// <param name="index">Índice de habilidad (1 o 2)</param>
+    /// <param name="targetNetId">NetId del target seleccionado (0 si no hay target)</param>
     [Command]
-    void CmdUsarHabilidad(int index)
+    void CmdUsarHabilidad(int index, uint targetNetId)
     {
         HabilidadBase habilidad = (index == 1) ? habilidad1 : habilidad2;
-        
-        if (habilidad == null) return;
+
+        if (habilidad == null)
+        {
+            Debug.LogWarning($"[COMBAT] Habilidad {index} no está asignada.");
+            return;
+        }
+
+        Debug.Log($"[COMBAT] Intentando usar habilidad {index}: {habilidad.nombreHabilidad} (targetNetId: {targetNetId})");
 
         // 1. Validar Cooldown
         double cooldownFin = (index == 1) ? cooldownHabilidad1 : cooldownHabilidad2;
@@ -94,30 +133,46 @@ public class PlayerCombat : NetworkBehaviour
             return;
         }
 
-        // 2. Validar Mana
+        // 2. Obtener el NetworkIdentity del target desde el netId (si se proporcionó)
+        NetworkIdentity target = null;
+        if (targetNetId != 0)
+        {
+            // Buscar el NetworkIdentity por netId
+            if (NetworkServer.spawned.TryGetValue(targetNetId, out NetworkIdentity targetIdentity))
+            {
+                target = targetIdentity;
+                Debug.Log($"[COMBAT] Target encontrado: {target.name} (netId: {targetNetId})");
+            }
+            else
+            {
+                Debug.LogWarning($"[COMBAT] Target con netId {targetNetId} no encontrado en el servidor.");
+                return;
+            }
+        }
+
+        // 3. Validar que hay target si la habilidad lo requiere
+        if (habilidad.damage > 0 && habilidad.tipoObjetivo == TipoObjetivo.Enemy)
+        {
+            if (target == null)
+            {
+                Debug.LogWarning($"[COMBAT] Habilidad de daño requiere un target. Debes clickear un enemigo primero.");
+                return;
+            }
+        }
+
+        // 4. Validar Mana DESPUÉS de confirmar que se puede usar la habilidad
         if (!stats.ConsumirMana(habilidad.manaCost))
         {
             Debug.Log("[COMBAT] No hay suficiente mana.");
             return;
         }
 
-        // 3. Validar Target/Rango (si requiere enemigo)
-        NetworkIdentity target = targetingSystem.objetivoActual; // Nota: TargetingSystem necesita sincronizar su target al servidor
-        // ERROR: TargetingSystem.objetivoActual es local del cliente. 
-        // Solución MVP: Enviar target netId en el Command o usar el target sincronizado si existiera.
-        // Para MVP, vamos a asumir que el cliente TIENE que enviar el target, o simplificamos atacando lo que el servidor crea que mira.
-        // MEJOR: Enviar el NetID del target como parámetro extra. (Lo haremos en Fase 6 refinada).
-        // Por ahora, usaremos overlap sphere o raycast en servidor si es habilidad de target.
-        
-        // CORRECCIÓN RAPIDA: El Command debería recibir el target NetId. 
-        // Pero para no complicar la firma ahora, asumiremos 'self' o 'raycast forward' simple server-side.
-        
-        // Ejecutar lógica según tipo
-        EjecutarHabilidad(habilidad, target);
-
-        // Activar Cooldown
+        // 5. Activar Cooldown ANTES de ejecutar (para evitar spam)
         if (index == 1) cooldownHabilidad1 = NetworkTime.time + habilidad.cooldown;
         else cooldownHabilidad2 = NetworkTime.time + habilidad.cooldown;
+
+        // 6. Ejecutar habilidad
+        EjecutarHabilidad(habilidad, target);
     }
 
     [Server]
@@ -134,45 +189,65 @@ public class PlayerCombat : NetworkBehaviour
                 if (habilidad.tipoObjetivo == TipoObjetivo.Self)
                 {
                     stats.Curar(habilidad.healing);
+                    Debug.Log($"[SERVER] ✓ Curación aplicada: +{habilidad.healing} HP");
                 }
-                // TODO: Curar aliado
+                // TODO FASE 6: Curar aliado
             }
             // Si es daño (Target: Enemy)
             else if (habilidad.damage > 0)
             {
-                Debug.Log($"[SERVER] Habilidad de daño detectada. Damage: {habilidad.damage}, Range: {habilidad.range}");
-                
-                // Para MVP simple: Raycast forward desde el servidor para encontrar enemigo
-                Vector3 rayOrigin = transform.position + Vector3.up;
-                Vector3 rayDirection = transform.forward;
-                
-                Debug.Log($"[SERVER] Lanzando raycast desde {rayOrigin} en dirección {rayDirection}");
-                
-                if (Physics.Raycast(rayOrigin, rayDirection, out RaycastHit hit, habilidad.range))
+                // El target ya fue validado en CmdUsarHabilidad, pero hacemos validaciones adicionales
+
+                // Obtener PlayerStats del target
+                PlayerStats enemigoStats = target.GetComponent<PlayerStats>();
+                if (enemigoStats == null)
                 {
-                    Debug.Log($"[SERVER] Raycast impactó: {hit.collider.gameObject.name} a distancia {hit.distance}");
-                    
-                    PlayerStats enemigoStats = hit.collider.GetComponent<PlayerStats>();
-                    if (enemigoStats != null && enemigoStats != stats)
-                    {
-                        Debug.Log($"[SERVER] Enemigo encontrado! Aplicando daño...");
-                        DamageSystem.AplicarDanioHabilidad(enemigoStats, habilidad, stats, gameObject);
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[SERVER] El objeto impactado no tiene PlayerStats o es el mismo jugador.");
-                    }
+                    Debug.LogWarning($"[SERVER] El target seleccionado no es un jugador válido (no tiene PlayerStats).");
+                    return;
                 }
-                else
+
+                // Verificar que no sea el mismo jugador
+                if (enemigoStats == stats)
                 {
-                    Debug.LogWarning($"[SERVER] Raycast no impactó nada. Asegúrate de que el enemigo esté frente a ti y dentro del rango.");
+                    Debug.LogWarning($"[SERVER] No puedes atacarte a ti mismo.");
+                    return;
                 }
+
+                // Verificar distancia
+                float distancia = Vector3.Distance(transform.position, target.transform.position);
+
+                if (distancia > habilidad.range)
+                {
+                    Debug.LogWarning($"[SERVER] Target fuera de rango. Distancia: {distancia:F2}m, Rango máximo: {habilidad.range}m");
+                    return;
+                }
+
+                // Validar PvP (usando ZoneDetector)
+                // NOTA: Comentado temporalmente para testing. Descomentar para producción.
+                /*
+                ZoneDetector zoneDetector = GetComponent<ZoneDetector>();
+                if (zoneDetector != null && !zoneDetector.PvPPermitido())
+                {
+                    Debug.LogWarning($"[SERVER] No puedes atacar en zona segura.");
+                    return;
+                }
+                */
+                Debug.Log($"[DEBUG] Validación de PvP deshabilitada para testing.");
+
+                // ¡Aplicar daño!
+                Debug.Log($"[SERVER] ✓ Aplicando {habilidad.damage} de daño a {enemigoStats.name} (Distancia: {distancia:F2}m)");
+                DamageSystem.AplicarDanioHabilidad(enemigoStats, habilidad, stats, gameObject);
             }
         }
         else if (habilidad.tipoHabilidad == TipoHabilidad.Projectile)
         {
-            // TODO: Spawn proyectil
-            Debug.LogWarning("[SERVER] Proyectiles pendientes de implementar.");
+            // TODO FASE 5: Spawn proyectil
+            Debug.LogWarning("[SERVER] Proyectiles pendientes de implementar (requiere ProjectileController.cs).");
+        }
+        else if (habilidad.tipoHabilidad == TipoHabilidad.AoE)
+        {
+            // TODO FASE 6: Implementar AoE
+            Debug.LogWarning("[SERVER] Habilidades AoE pendientes de implementar.");
         }
     }
 

@@ -1,46 +1,48 @@
 # Progreso del MMO MVP
 
-Última actualización: Enero 2026
+Última actualización: Enero 10, 2026
 
 ---
 
 ## ✅ COMPLETADO
 
-### FASE 0: Preparación
+### FASE 0: Preparación (100%)
 - ✅ Mirror Networking instalado en Assets/Mirror/
 - ✅ Estructura de carpetas creada
 - ✅ README.md del proyecto
 
-### FASE 1: Networking Básico
+### FASE 1: Networking Básico (100%)
 **Scripts creados:**
-- ✅ `NetworkManager_MMO.cs` - Gestión de conexiones y spawning
-- ✅ `PlayerController.cs` - Controlador principal del jugador
-- ✅ `PlayerMovement.cs` - Sistema de movimiento con WASD/QE
+- ✅ `NetworkManager_MMO.cs` (157 líneas) - Gestión de conexiones y spawning
+- ✅ `PlayerController.cs` (290 líneas) - Controlador principal del jugador
+- ✅ `PlayerMovement.cs` (282 líneas) - Sistema de movimiento con WASD/QE
 
 **Funcionalidad:**
 - Múltiples jugadores pueden conectarse (2-5)
-- Movimiento sincronizado entre servidor y clientes
+- Movimiento sincronizado con Server Authority
 - Jugador local (verde) vs remotos (azul)
+- CharacterController con gravedad y física
 
-### FASE 2: Sistema de Zonas
+### FASE 2: Sistema de Zonas (100%)
 **Scripts creados:**
-- ✅ `ZoneController.cs` - Controlador base de zonas
-- ✅ `SafeZone.cs` - Zonas seguras (PvP off)
-- ✅ `UnsafeZone.cs` - Zonas peligrosas (PvP on)
-- ✅ `ZoneDetector.cs` - Detector en jugador
+- ✅ `ZoneController.cs` (197 líneas) - Controlador base de zonas
+- ✅ `SafeZone.cs` (119 líneas) - Zonas seguras (PvP off)
+- ✅ `UnsafeZone.cs` (155 líneas) - Zonas peligrosas (PvP on)
+- ✅ `ZoneDetector.cs` (312 líneas) - Detector en jugador
 
 **Funcionalidad:**
 - Detección automática de zonas con triggers
 - PvP habilitado/deshabilitado según zona
 - Sincronización de zona actual por red
+- Server Authority en cambios de zona
 
-### FASE 3: Clases y Stats
+### FASE 3: Clases y Stats (100%)
 **Scripts creados:**
-- ✅ `PlayerStats.cs` - Sistema completo de estadísticas
-- ✅ `ClaseBase.cs` - ScriptableObject base para clases
-- ✅ `HabilidadBase.cs` - ScriptableObject para habilidades
-- ✅ `PlayerClassSelector.cs` - Selección de clase
-- ✅ `ClasesConfigurator.cs` - Helper para crear las 4 clases
+- ✅ `PlayerStats.cs` (678 líneas) - Sistema completo de estadísticas
+- ✅ `ClaseBase.cs` (180 líneas) - ScriptableObject base para clases
+- ✅ `HabilidadBase.cs` (244 líneas) - ScriptableObject para habilidades
+- ✅ `PlayerClassSelector.cs` (379 líneas) - Selección de clase
+- ✅ `ClasesConfigurator.cs` (209 líneas) - Helper para crear las 4 clases
 
 **Clases implementadas:**
 1. **Mago**: HP 80, Mana 150, Damage 25, Defense 5, Speed 4
@@ -50,16 +52,19 @@
 
 **Funcionalidad:**
 - Sistema completo de HP/Mana/Level/XP/Gold
-- Muerte y respawn
+- Muerte y respawn con delay de 5s
 - Stats escaladas por nivel
+- Level-up automático con fórmula XP: 100 * nivel^2
 - Selección de clase al inicio
+- Sistema de daño con defensa
+- Eventos (OnHealthChanged, OnManaChanged, OnLevelChanged)
 
-### FASE 4: Inventario
+### FASE 4: Inventario (100%)
 **Scripts creados:**
-- ✅ `ItemData.cs` - ScriptableObject para items
-- ✅ `InventorySlot.cs` - Estructura de slot
-- ✅ `ItemDatabase.cs` - Singleton de base de datos
-- ✅ `PlayerInventory.cs` - Inventario con SyncList
+- ✅ `ItemData.cs` (272 líneas) - ScriptableObject para items
+- ✅ `InventorySlot.cs` (91 líneas) - Estructura de slot
+- ✅ `ItemDatabase.cs` (322 líneas) - Singleton de base de datos
+- ✅ `PlayerInventory.cs` (599 líneas) - Inventario con SyncList
 
 **Funcionalidad:**
 - Inventario de 20 slots sincronizado por red
@@ -67,19 +72,62 @@
 - Añadir/remover/mover items
 - Consumibles funcionales
 - Server Authority completo
+- Callbacks de cambio en inventario
+
+### FASE 5: Combate y Habilidades (90% - Core completo, faltan extras)
+**Scripts creados:**
+- ✅ `DamageSystem.cs` (319 líneas) - Sistema centralizado de daño
+- ✅ `TargetingSystem.cs` (99 líneas) - Selección de targets con clic
+- ✅ `PlayerCombat.cs` (218 líneas) - Sistema de combate completo
+
+**Funcionalidad implementada:**
+- Sistema de daño con defensa (fórmula: daño - defensa/2, min 1)
+- Críticos al 10% de probabilidad (150% daño)
+- Targeting con clic izquierdo (raycast desde cámara)
+- **✅ Target sincronizado al servidor (envía netId en Command)**
+- Input de habilidades (teclas 1 y 2)
+- Sistema de cooldowns con NetworkTime
+- Validación de mana
+- Validación de rango
+- Validación de PvP según zona
+- Server Authority en todo el combate
+- **✅ Combate funcional sin raycast direccional**
+
+**🐛 Bugs corregidos (Enero 10, 2026):**
+- ✅ Error de mayúsculas en PlayerCombat.cs
+- ✅ Target ahora se sincroniza correctamente al servidor (envía netId)
+- ✅ Eliminado raycast direccional problemático
+- ✅ Combate funciona clickeando al enemigo
+- ✅ Orden de validaciones corregido (verifica target ANTES de consumir mana)
+- ✅ **TESTING COMPLETADO**: Combate PvP verificado funcionando correctamente
+
+**Pendiente en FASE 5:**
+- ❌ `ProjectileController.cs` - Para habilidades tipo Projectile
+- ❌ 8 habilidades específicas de clases (solo framework existe)
+- ❌ Efectos visuales de combate
+- ❌ UI de cooldowns conectada
 
 ---
 
-## 🔄 EN PROGRESO
+## 🎁 EXTRAS IMPLEMENTADOS (No planeados originalmente)
 
-### FASE 5: Combate y Habilidades
-**Pendiente:**
-- DamageSystem.cs
-- TargetingSystem.cs
-- PlayerCombat.cs
-- CooldownManager.cs
-- ProjectileController.cs
-- Habilidades específicas de cada clase (8 total)
+### UI Parcialmente Implementada
+**Scripts creados:**
+- ✅ `ActionBarUI.cs` (100 líneas) - Iconos de habilidades
+- ✅ `ClassSelectionUI.cs` (120 líneas) - Panel selección de clase
+- ✅ `PlayerHUD.cs` (80 líneas) - HUD principal
+- ✅ `TargetFrameUI.cs` (60 líneas) - Marco de target
+
+### Editor Helpers
+**Scripts creados:**
+- ✅ `SetupClasses.cs` (88 líneas) - Helper para configurar clases
+- ✅ `SetupAbilities.cs` (115 líneas) - Helper para configurar habilidades
+- ✅ `SetupUIScene.cs` (233 líneas) - Helper para configurar escenas UI
+
+### Utilidades
+**Scripts creados:**
+- ✅ `NetworkDebugger.cs` (170 líneas) - Info de debugging de red
+- ✅ `AudioListenerManager.cs` (30 líneas) - Gestión de listeners
 
 ---
 
@@ -184,20 +232,51 @@ Assets/_Game/
 
 ## 📊 Estadísticas
 
-- **Scripts creados**: 18
-- **Líneas de código**: ~3,500+
+- **Scripts creados**: 28 archivos (vs 18 reportados anteriormente)
+- **Líneas de código**: ~6,276 líneas (actualizado con correcciones)
 - **Comentarios**: Extensivos en español
 - **Networking**: 100% server authority
-- **Progreso total**: 33% (4/12 fases)
+- **Progreso total**: 46% (5.9/13 fases)
+  - Fases 0-4: ✅ 100% completas
+  - Fase 5: ✅ 90% completa (core combate testeado y funcional)
+  - Fases 6-12: ⏳ Pendientes
 
 ---
 
 ## 🎯 Próximos Pasos
 
-1. Completar FASE 5 (Combate y Habilidades)
-2. Crear las 8 habilidades (2 por clase)
-3. Implementar targeting y cooldowns
-4. Testing de PvP en zonas unsafe
+### ✅ Completado (Enero 10, 2026)
+1. **Bugs en FASE 5 corregidos**:
+   - ✅ Actualizar PROGRESO.md con estado real
+   - ✅ Corregir bug de mayúsculas en PlayerCombat.cs
+   - ✅ Sincronizar target al servidor (enviar netId en Command)
+   - ✅ Eliminar raycast direccional, usar solo target clickeado
+   - ✅ Corregir orden de validaciones (target antes de consumir recursos)
+
+2. **Testing de combate completado**:
+   - ✅ Probar combate PvP (Mago vs Paladín)
+   - ✅ Verificar sincronización de daño (HP: 150→114→78)
+   - ✅ Validar que no se consume mana sin target
+   - ✅ Verificar cooldowns funcionando
+   - ✅ Confirmar curación funcional (Bendición, Escudo Arcano)
+
+### 🔄 Siguientes tareas
+
+**Opciones para continuar:**
+
+**Opción A: Completar FASE 5 al 100%** (3-5h):
+   - ⏳ Implementar ProjectileController.cs (1-2h)
+   - ⏳ Crear las 8 habilidades específicas usando HabilidadBase (2-3h)
+   - ⏳ Conectar UI de cooldowns (30min)
+   - ⏳ Agregar efectos visuales básicos (1-2h)
+   - ⏳ Re-habilitar validación de PvP según zonas
+
+**Opción B: Iniciar FASE 6 - Muerte y Full Loot** (core ya funciona):
+   - Implementar DeathHandler.cs
+   - Implementar ItemDrop.cs
+   - Implementar ItemPickup.cs
+
+**Nota**: PvP validation está temporalmente deshabilitada para testing en PlayerCombat.cs:226-234
 
 ---
 

@@ -47,8 +47,12 @@ public class TargetingSystem : NetworkBehaviour
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
+            Debug.Log($"[Targeting] Click detectado. Lanzando raycast...");
+
             if (Physics.Raycast(ray, out hit, rangoSeleccion, capasSeleccionables))
             {
+                Debug.Log($"[Targeting] Raycast impactó: {hit.collider.gameObject.name}");
+
                 // Verificar si tiene NetworkIdentity (es un objeto "vivo" en la red)
                 NetworkIdentity identidad = hit.collider.GetComponentInParent<NetworkIdentity>();
 
@@ -56,6 +60,18 @@ public class TargetingSystem : NetworkBehaviour
                 {
                     SeleccionarObjetivo(identidad);
                 }
+                else if (identidad == netIdentity)
+                {
+                    Debug.LogWarning($"[Targeting] No puedes seleccionarte a ti mismo.");
+                }
+                else
+                {
+                    Debug.LogWarning($"[Targeting] El objeto clickeado no tiene NetworkIdentity.");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[Targeting] Raycast no impactó nada. Verifica que el jugador tenga collider y esté en la capa correcta.");
             }
         }
     }
