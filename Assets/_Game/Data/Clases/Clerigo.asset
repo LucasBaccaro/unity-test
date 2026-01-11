@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef75563b63cd84cee9fa877be3d9e696, type: 3}
+  m_Name: Clerigo
+  m_EditorClassIdentifier: Assembly-CSharp::ClaseBase
+  nombreClase: Clerigo
+  descripcion: "Clase Clerigo generada autom\xE1ticamente."
+  iconoClase: {fileID: 0}
+  hpBase: 100
+  manaBase: 120
+  damageBase: 12
+  defenseBase: 5
+  speedBase: 5
+  habilidades:
+  - {fileID: 11400000, guid: 41881f51f75a84ce6aa5aec7a34e701e, type: 2}
+  - {fileID: 11400000, guid: 6bb3c59f3d7ad47aea119f1fb03fdfdc, type: 2}
+  colorClase: {r: 1, g: 1, b: 1, a: 1}
+  modeloPrefab: {fileID: 0}
